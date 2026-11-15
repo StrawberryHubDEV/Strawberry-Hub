@@ -190,11 +190,13 @@ local function clearKey()
 end
 
 local function loadPart(key)
+    pcall(function() getgenv().script_key = key end)
+    script_key = key
     return pcall(function()
         if loaderName == "Strawberry1" then
-            loadstring(game:HttpGet("https://flowauth.net/v1/loaders/Strawberry1.lua"))(key)
+            loadstring(game:HttpGet("https://flowauth.net/v1/loaders/Strawberry1.lua"))()
         else
-            loadstring(game:HttpGet("https://flowauth.net/v1/loaders/Strawberry2.lua"))(key)
+            loadstring(game:HttpGet("https://flowauth.net/v1/loaders/Strawberry2.lua"))()
         end
     end)
 end
@@ -202,7 +204,6 @@ end
 local key = savedKey() or askKey()
 
 for _ = 1, 5 do
-    pcall(function() getgenv().script_key = key end)
     local ok, err = loadPart(key)
     if ok then
         saveKey(key)
