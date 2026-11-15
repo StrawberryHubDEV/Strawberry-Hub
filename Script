@@ -2,11 +2,38 @@ if not game:IsLoaded() then
     game.Loaded:Wait()
 end
 
--- one script for every game (Primeval Earth Free, Sniper Arena, Bug Evolution, Home Defense, Jurassic Blocky, Murder Mystery 2);
--- it works out which game you're in by itself
-local ALL_GAMES = "https://api.luarmor.net/files/v4/loaders/bc835159425cc6f0567a7508c803c963.lua"
+-- one loader for every game; it works out which game you're in and loads the part that has it
+local PART_1 = "https://flowauth.net/v1/loaders/Strawberry1.lua" -- Sniper Arena, Bug Evolution, Home Defense, Jurassic Blocky, Primeval Earth Free
+local PART_2 = "https://flowauth.net/v1/loaders/Strawberry2.lua" -- Murder Mystery 2, The Sanctuary, Backseat Rally, Prehistoria, Jurassic Pixel, Creatures of Sonaria
 
 local DISCORD = "discord.gg/AH8SRWBxQy"
+
+local PLACES = {
+    [122446657157717] = PART_1, [90165746516953] = PART_1, -- Sniper Arena
+    [70650894743738] = PART_1, -- Bug Evolution
+    [105527962898452] = PART_1, -- Home Defense
+    [11653088948] = PART_1, -- Jurassic Blocky
+    [10696301650] = PART_1, -- Primeval Earth
+    [142823291] = PART_2, -- Murder Mystery 2
+    [108379405712368] = PART_2, -- The Sanctuary
+    [94278659624110] = PART_2, -- Backseat Rally
+    [6686932749] = PART_2, -- Prehistoria
+    [105667060450408] = PART_2, -- Jurassic Pixel
+    [5233782396] = PART_2, -- Creatures of Sonaria
+}
+
+-- game (universe) ids: catch every place of a game (lobbies, matches, event servers)
+local GAMES = {
+    [9534705677] = PART_1, [10769957062] = PART_1, [10769857262] = PART_1, [4130569984] = PART_1,
+    [5591327764] = PART_2, [10769543742] = PART_2, [7396714471] = PART_2, [1831550657] = PART_2,
+}
+
+local KEYWORDS = {
+    {"sniper arena", PART_1}, {"bug evolution", PART_1}, {"home defense", PART_1}, {"primeval", PART_1},
+    {"murder mystery", PART_2}, {"sanctuary", PART_2}, {"backseat rally", PART_2}, {"prehistoria", PART_2},
+    {"jurassic pixel", PART_2}, {"creatures of sonaria", PART_2},
+    {"jurassic", PART_1},
+}
 
 local function notify(text, duration)
     pcall(function()
@@ -18,36 +45,40 @@ local function notify(text, duration)
     end)
 end
 
--- game:HttpGet first, then the executor's request function if that fails
-local function fetch(url)
-    local ok, body = pcall(function() return game:HttpGet(url) end)
-    if ok and type(body) == "string" and #body > 0 then return body end
-    local req = (syn and syn.request) or (http and http.request) or http_request or request
-    if req then
-        local ok2, res = pcall(req, {Url = url, Method = "GET"})
-        if ok2 and res and type(res.Body) == "string" and #res.Body > 0 then return res.Body end
+local function pickPart()
+    local part = PLACES[game.PlaceId] or GAMES[game.GameId]
+    if part then return part end
+    -- Jurassic Blocky's other places
+    local ok, isJurassic = pcall(function()
+        local ts = game:GetService("ReplicatedStorage"):FindFirstChild("TS")
+        local config = ts and ts:FindFirstChild("config")
+        return config ~= nil and config:FindFirstChild("dinosaur-stats") ~= nil
+    end)
+    if ok and isJurassic then return PART_1 end
+    local okInfo, info = pcall(function()
+        return game:GetService("MarketplaceService"):GetProductInfo(game.PlaceId)
+    end)
+    local name = okInfo and info and string.lower(tostring(info.Name)) or ""
+    for _, entry in ipairs(KEYWORDS) do
+        if string.find(name, entry[1], 1, true) then return entry[2] end
     end
-    return nil, tostring(body)
+    return nil
 end
 
-local url = ALL_GAMES
-
-local src, httpErr = fetch(url)
-if not src then
-    notify("Couldn't download the script. Check your internet / executor and try again.")
-    warn("[Strawberry Hub] download failed: " .. tostring(httpErr))
+local url = pickPart()
+if not url then
+    notify("This game isn't supported yet. Discord: " .. DISCORD, 15)
     return
 end
 
-local fn, compileErr = loadstring(src)
-if not fn then
-    notify("Script failed to start (" .. string.sub(tostring(compileErr), 1, 80) .. "). Ask in " .. DISCORD)
-    warn("[Strawberry Hub] loadstring failed: " .. tostring(compileErr))
-    return
-end
-
-local ok, runErr = xpcall(fn, debug.traceback)
+local ok, err = pcall(function()
+    if url == PART_1 then
+        loadstring(game:HttpGet("https://flowauth.net/v1/loaders/Strawberry1.lua"))()
+    else
+        loadstring(game:HttpGet("https://flowauth.net/v1/loaders/Strawberry2.lua"))()
+    end
+end)
 if not ok then
-    notify("Script error: " .. string.sub(tostring(runErr), 1, 80) .. " - ask in " .. DISCORD)
-    warn("[Strawberry Hub] script error: " .. tostring(runErr))
+    notify("Script error: " .. string.sub(tostring(err), 1, 80) .. " - ask in " .. DISCORD)
+    warn("[Strawberry Hub] " .. tostring(err))
 end
