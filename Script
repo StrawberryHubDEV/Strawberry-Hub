@@ -2,13 +2,8 @@ if not game:IsLoaded() then
     game.Loaded:Wait()
 end
 
--- one loader for every game; it works out which game you're in and loads the part that has it
--- Strawberry1: Sniper Arena, Bug Evolution, Home Defense, Jurassic Blocky, Primeval Earth Free
--- Strawberry2: Murder Mystery 2, The Sanctuary, Backseat Rally, Prehistoria, Jurassic Pixel, Creatures of Sonaria
-
 local DISCORD = "discord.gg/AH8SRWBxQy"
 
--- {game name, loader name}
 local SNIPER = {"Sniper Arena", "Strawberry1"}
 local BUGEVO = {"Bug Evolution", "Strawberry1"}
 local HOMEDEF = {"Home Defense", "Strawberry1"}
@@ -35,7 +30,6 @@ local PLACES = {
     [5233782396] = SONARIA,
 }
 
--- game (universe) ids: catch every place of a game (lobbies, matches, event servers)
 local GAMES = {
     [9534705677] = SNIPER, [10769957062] = BUGEVO, [10769857262] = HOMEDEF, [4130569984] = JURASSIC,
     [5591327764] = SANCTUARY, [10769543742] = BACKSEAT, [7396714471] = JPIXEL, [1831550657] = SONARIA,
@@ -61,7 +55,6 @@ end
 local function pickGame()
     local found = PLACES[game.PlaceId] or GAMES[game.GameId]
     if found then return found end
-    -- Jurassic Blocky's other places
     local ok, isJurassic = pcall(function()
         local ts = game:GetService("ReplicatedStorage"):FindFirstChild("TS")
         local config = ts and ts:FindFirstChild("config")
@@ -87,7 +80,6 @@ end
 local gameName, loaderName = found[1], found[2]
 notify("Loading " .. gameName .. " (" .. loaderName .. ")...", 5)
 
--- Key: saved per Roblox account, so switching to another account always asks for a key again
 local KEY_LINK = "https://flowauth.net/reward/d8150ed20d29af60144e20091609c8ef"
 local player = game:GetService("Players").LocalPlayer
 local KEY_FILE = "StrawberryHub/key_" .. tostring(player.UserId) .. ".txt"
@@ -108,7 +100,6 @@ local function saveKey(k)
     end)
 end
 
--- small key box; yields until the player enters a key
 local function askKey()
     local gui = Instance.new("ScreenGui")
     gui.Name = "StrawberryKey"
@@ -193,21 +184,38 @@ local function askKey()
     return k
 end
 
--- a key typed above the loader (script_key="...") counts for the account that ran it
-local typed = rawget(getgenv and getgenv() or _G, "script_key") or script_key
-typed = typed and trim(typed) or ""
-local key = typed ~= "" and typed or savedKey() or askKey()
-saveKey(key)
-pcall(function() getgenv().script_key = key end)
+local function clearKey()
+    if hasFS and type(delfile) == "function" then pcall(delfile, KEY_FILE) end
+    pcall(function() getgenv().script_key = nil end)
+end
 
-local ok, err = pcall(function()
-    if loaderName == "Strawberry1" then
-        loadstring(game:HttpGet("https://flowauth.net/v1/loaders/Strawberry1.lua"))(key)
-    else
-        loadstring(game:HttpGet("https://flowauth.net/v1/loaders/Strawberry2.lua"))(key)
+local function loadPart(key)
+    return pcall(function()
+        if loaderName == "Strawberry1" then
+            loadstring(game:HttpGet("https://flowauth.net/v1/loaders/Strawberry1.lua"))(key)
+        else
+            loadstring(game:HttpGet("https://flowauth.net/v1/loaders/Strawberry2.lua"))(key)
+        end
+    end)
+end
+
+local key = savedKey() or askKey()
+
+for _ = 1, 5 do
+    pcall(function() getgenv().script_key = key end)
+    local ok, err = loadPart(key)
+    if ok then
+        saveKey(key)
+        return
     end
-end)
-if not ok then
-    notify(gameName .. " failed to load: " .. string.sub(tostring(err), 1, 80) .. " - ask in " .. DISCORD)
-    warn("[Strawberry Hub] " .. loaderName .. " (" .. gameName .. ") error: " .. tostring(err))
+    local msg = tostring(err)
+    if not string.find(msg, "FlowAuthError", 1, true) or string.find(msg, "rate", 1, true) then
+        notify(gameName .. " failed to load: " .. string.sub(msg, 1, 80) .. " - ask in " .. DISCORD)
+        warn("[Strawberry Hub] " .. loaderName .. " (" .. gameName .. ") error: " .. msg)
+        return
+    end
+    clearKey()
+    local reason = string.match(msg, "%] ([^%.]+)") or "That key didn't work"
+    notify(reason .. ". Enter a new key.", 8)
+    key = askKey()
 end
