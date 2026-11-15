@@ -4,219 +4,54 @@ end
 
 local DISCORD = "discord.gg/AH8SRWBxQy"
 
-local SNIPER = {"Sniper Arena", "Strawberry1"}
-local BUGEVO = {"Bug Evolution", "Strawberry1"}
-local HOMEDEF = {"Home Defense", "Strawberry1"}
-local JURASSIC = {"Jurassic Blocky", "Strawberry1"}
-local PRIMEVAL = {"Primeval Earth", "Strawberry1"}
-local MM2 = {"Murder Mystery 2", "Strawberry2"}
-local SANCTUARY = {"The Sanctuary", "Strawberry2"}
-local BACKSEAT = {"Backseat Rally", "Strawberry2"}
-local PREHISTORIA = {"Prehistoria", "Strawberry2"}
-local JPIXEL = {"Jurassic Pixel", "Strawberry2"}
-local SONARIA = {"Creatures of Sonaria", "Strawberry2"}
+local PART_1 = {"Sniper Arena", "Bug Evolution", "Home Defense", "Jurassic Blocky", "Primeval Earth"}
+local PART_2 = {"Murder Mystery 2", "The Sanctuary", "Backseat Rally", "Prehistoria", "Jurassic Pixel", "Creatures of Sonaria"}
 
 local PLACES = {
-    [122446657157717] = SNIPER, [90165746516953] = SNIPER,
-    [70650894743738] = BUGEVO,
-    [105527962898452] = HOMEDEF,
-    [11653088948] = JURASSIC,
-    [10696301650] = PRIMEVAL,
-    [142823291] = MM2,
-    [108379405712368] = SANCTUARY,
-    [94278659624110] = BACKSEAT,
-    [6686932749] = PREHISTORIA,
-    [105667060450408] = JPIXEL,
-    [5233782396] = SONARIA,
+    [122446657157717] = 1, [90165746516953] = 1, [70650894743738] = 1, [105527962898452] = 1,
+    [11653088948] = 1, [10696301650] = 1,
+    [142823291] = 2, [108379405712368] = 2, [94278659624110] = 2, [6686932749] = 2,
+    [105667060450408] = 2, [5233782396] = 2,
 }
 
 local GAMES = {
-    [9534705677] = SNIPER, [10769957062] = BUGEVO, [10769857262] = HOMEDEF, [4130569984] = JURASSIC,
-    [5591327764] = SANCTUARY, [10769543742] = BACKSEAT, [7396714471] = JPIXEL, [1831550657] = SONARIA,
+    [9534705677] = 1, [10769957062] = 1, [10769857262] = 1, [4130569984] = 1,
+    [5591327764] = 2, [10769543742] = 2, [7396714471] = 2, [1831550657] = 2,
 }
 
-local KEYWORDS = {
-    {"sniper arena", SNIPER}, {"bug evolution", BUGEVO}, {"home defense", HOMEDEF}, {"primeval", PRIMEVAL},
-    {"murder mystery", MM2}, {"sanctuary", SANCTUARY}, {"backseat rally", BACKSEAT}, {"prehistoria", PREHISTORIA},
-    {"jurassic pixel", JPIXEL}, {"creatures of sonaria", SONARIA},
-    {"jurassic", JURASSIC},
-}
-
-local function notify(text, duration)
+local function notify(text)
     pcall(function()
-        game:GetService("StarterGui"):SetCore("SendNotification", {
-            Title = "Strawberry Hub",
-            Text = text,
-            Duration = duration or 10,
-        })
+        game:GetService("StarterGui"):SetCore("SendNotification", {Title = "Strawberry Hub", Text = text, Duration = 10})
     end)
 end
 
-local function pickGame()
-    local found = PLACES[game.PlaceId] or GAMES[game.GameId]
-    if found then return found end
+local function pickPart()
+    local part = PLACES[game.PlaceId] or GAMES[game.GameId]
+    if part then return part end
     local ok, isJurassic = pcall(function()
         local ts = game:GetService("ReplicatedStorage"):FindFirstChild("TS")
         local config = ts and ts:FindFirstChild("config")
         return config ~= nil and config:FindFirstChild("dinosaur-stats") ~= nil
     end)
-    if ok and isJurassic then return JURASSIC end
+    if ok and isJurassic then return 1 end
     local okInfo, info = pcall(function()
         return game:GetService("MarketplaceService"):GetProductInfo(game.PlaceId)
     end)
     local name = okInfo and info and string.lower(tostring(info.Name)) or ""
-    for _, entry in ipairs(KEYWORDS) do
-        if string.find(name, entry[1], 1, true) then return entry[2] end
+    for n, list in ipairs({PART_1, PART_2}) do
+        for _, gameName in ipairs(list) do
+            if string.find(name, string.lower(gameName), 1, true) then return n end
+        end
     end
+    if string.find(name, "jurassic", 1, true) then return 1 end
     return nil
 end
 
-local found = pickGame()
-if not found then
-    notify("This game isn't supported yet. Discord: " .. DISCORD, 15)
-    return
-end
-
-local gameName, loaderName = found[1], found[2]
-notify("Loading " .. gameName .. " (" .. loaderName .. ")...", 5)
-
-local KEY_LINK = "https://flowauth.net/reward/d8150ed20d29af60144e20091609c8ef"
-local player = game:GetService("Players").LocalPlayer
-local KEY_FILE = "StrawberryHub/key_" .. tostring(player.UserId) .. ".txt"
-local hasFS = type(readfile) == "function" and type(writefile) == "function" and type(isfile) == "function"
-
-local function trim(v) return (string.gsub(tostring(v or ""), "^%s*(.-)%s*$", "%1")) end
-local function savedKey()
-    if not hasFS then return nil end
-    local ok, v = pcall(function() return isfile(KEY_FILE) and readfile(KEY_FILE) or "" end)
-    v = ok and trim(v) or ""
-    return v ~= "" and v or nil
-end
-local function saveKey(k)
-    if not hasFS then return end
-    pcall(function()
-        if type(isfolder) == "function" and type(makefolder) == "function" and not isfolder("StrawberryHub") then makefolder("StrawberryHub") end
-        writefile(KEY_FILE, k)
-    end)
-end
-
-local function askKey()
-    local gui = Instance.new("ScreenGui")
-    gui.Name = "StrawberryKey"
-    gui.ResetOnSpawn = false
-    gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-    pcall(function() gui.Parent = (gethui and gethui()) or game:GetService("CoreGui") end)
-    if not gui.Parent then gui.Parent = player:WaitForChild("PlayerGui") end
-
-    local card = Instance.new("Frame")
-    card.Size = UDim2.fromOffset(340, 190)
-    card.AnchorPoint = Vector2.new(0.5, 0.5)
-    card.Position = UDim2.fromScale(0.5, 0.5)
-    card.BackgroundColor3 = Color3.fromRGB(18, 16, 22)
-    card.Parent = gui
-    Instance.new("UICorner", card).CornerRadius = UDim.new(0, 12)
-    local stroke = Instance.new("UIStroke", card)
-    stroke.Color = Color3.fromRGB(255, 60, 110)
-    stroke.Thickness = 1.5
-
-    local function label(text, y, size, color, font)
-        local l = Instance.new("TextLabel")
-        l.BackgroundTransparency = 1
-        l.Size = UDim2.new(1, -32, 0, size + 4)
-        l.Position = UDim2.fromOffset(16, y)
-        l.Text = text
-        l.TextSize = size
-        l.TextColor3 = color
-        l.Font = font
-        l.TextXAlignment = Enum.TextXAlignment.Left
-        l.Parent = card
-        return l
-    end
-    label("Strawberry Hub", 14, 18, Color3.fromRGB(255, 255, 255), Enum.Font.GothamBold)
-    local info = label("Enter your key for " .. player.Name, 40, 12, Color3.fromRGB(170, 170, 180), Enum.Font.Gotham)
-
-    local box = Instance.new("TextBox")
-    box.Size = UDim2.new(1, -32, 0, 38)
-    box.Position = UDim2.fromOffset(16, 70)
-    box.BackgroundColor3 = Color3.fromRGB(30, 27, 36)
-    box.TextColor3 = Color3.fromRGB(255, 255, 255)
-    box.PlaceholderText = "Paste your key here"
-    box.PlaceholderColor3 = Color3.fromRGB(110, 110, 120)
-    box.Text = ""
-    box.TextSize = 13
-    box.Font = Enum.Font.Gotham
-    box.ClearTextOnFocus = false
-    box.Parent = card
-    Instance.new("UICorner", box).CornerRadius = UDim.new(0, 8)
-
-    local function button(text, x, primary)
-        local b = Instance.new("TextButton")
-        b.Size = UDim2.new(0.5, -22, 0, 38)
-        b.Position = UDim2.new(x, x == 0 and 16 or 6, 0, 124)
-        b.BackgroundColor3 = primary and Color3.fromRGB(255, 60, 110) or Color3.fromRGB(30, 27, 36)
-        b.TextColor3 = Color3.fromRGB(255, 255, 255)
-        b.Text = text
-        b.TextSize = 14
-        b.Font = Enum.Font.GothamBold
-        b.AutoButtonColor = true
-        b.Parent = card
-        Instance.new("UICorner", b).CornerRadius = UDim.new(0, 8)
-        return b
-    end
-    local getBtn = button("Get a key", 0, false)
-    local goBtn = button("Load", 0.5, true)
-
-    getBtn.MouseButton1Click:Connect(function()
-        local copied = type(setclipboard) == "function" and pcall(setclipboard, KEY_LINK)
-        info.Text = copied and "Key link copied, open it in your browser" or KEY_LINK
-    end)
-    local done = Instance.new("BindableEvent")
-    local function submit()
-        local k = trim(box.Text)
-        if k == "" then info.Text = "Paste your key first"; return end
-        done:Fire(k)
-    end
-    goBtn.MouseButton1Click:Connect(submit)
-    box.FocusLost:Connect(function(enter) if enter then submit() end end)
-
-    local k = done.Event:Wait()
-    gui:Destroy()
-    return k
-end
-
-local function clearKey()
-    if hasFS and type(delfile) == "function" then pcall(delfile, KEY_FILE) end
-    pcall(function() getgenv().script_key = nil end)
-end
-
-local function loadPart(key)
-    pcall(function() getgenv().script_key = key end)
-    script_key = key
-    return pcall(function()
-        if loaderName == "Strawberry1" then
-            loadstring(game:HttpGet("https://flowauth.net/v1/loaders/Strawberry1.lua"))()
-        else
-            loadstring(game:HttpGet("https://flowauth.net/v1/loaders/Strawberry2.lua"))()
-        end
-    end)
-end
-
-local key = savedKey() or askKey()
-
-for _ = 1, 5 do
-    local ok, err = loadPart(key)
-    if ok then
-        saveKey(key)
-        return
-    end
-    local msg = tostring(err)
-    if not string.find(msg, "FlowAuthError", 1, true) or string.find(msg, "rate", 1, true) then
-        notify(gameName .. " failed to load: " .. string.sub(msg, 1, 80) .. " - ask in " .. DISCORD)
-        warn("[Strawberry Hub] " .. loaderName .. " (" .. gameName .. ") error: " .. msg)
-        return
-    end
-    clearKey()
-    local reason = string.match(msg, "%] ([^%.]+)") or "That key didn't work"
-    notify(reason .. ". Enter a new key.", 8)
-    key = askKey()
+local part = pickPart()
+if part == 1 then
+    loadstring(game:HttpGet("https://flowauth.net/v1/loaders/Strawberry1.lua"))()
+elseif part == 2 then
+    loadstring(game:HttpGet("https://flowauth.net/v1/loaders/Strawberry2.lua"))()
+else
+    notify("This game isn't supported yet. Discord: " .. DISCORD)
 end
