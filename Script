@@ -20,18 +20,26 @@ local GAMES = {
 	[7396714471] = 2, [1831550657] = 2,
 }
 
-local NAMES_2 = {"murder mystery", "sanctuary", "backseat rally", "prehistoria", "jurassic pixel", "creatures of sonaria"}
+local NAMES = {
+	{"primeval", 1}, {"sniper arena", 1}, {"bug evolution", 1}, {"home defense", 1}, {"jurassic blocky", 1},
+	{"feral", 1}, {"degrade", 1}, {"vox seas", 1},
+	{"murder mystery", 2}, {"sanctuary", 2}, {"backseat rally", 2}, {"prehistoria", 2},
+	{"jurassic pixel", 2}, {"creatures of sonaria", 2},
+}
 
 local function detect()
 	local part = PLACES[game.PlaceId] or GAMES[game.GameId]
 	if part then return part end
-	local ok, info = pcall(function()
-		return game:GetService("MarketplaceService"):GetProductInfoAsync(game.PlaceId)
-	end)
-	if not ok or not info then return nil end
-	local name = string.lower(tostring(info.Name))
-	for _, k in ipairs(NAMES_2) do
-		if string.find(name, k, 1, true) then return 2 end
+	for _, id in ipairs({game.PlaceId, game.GameId}) do
+		local ok, info = pcall(function()
+			return game:GetService("MarketplaceService"):GetProductInfoAsync(id)
+		end)
+		if ok and info and info.Name then
+			local name = string.lower(tostring(info.Name))
+			for _, e in ipairs(NAMES) do
+				if string.find(name, e[1], 1, true) then return e[2] end
+			end
+		end
 	end
 	return nil
 end
