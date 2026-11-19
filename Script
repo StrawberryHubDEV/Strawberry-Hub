@@ -15,29 +15,66 @@ if genv.StrawberryLoaderRunning and os.clock() - genv.StrawberryLoaderRunning < 
 end
 genv.StrawberryLoaderRunning = os.clock()
 
-local PART_1 = "https://flowauth.net/v1/loaders/Strawberry1.lua"
-local PART_2 = "https://flowauth.net/v1/loaders/Strawberry2.lua"
+local PART_URL = {
+	[1] = "https://flowauth.net/v1/loaders/Strawberry1.lua",
+	[2] = "https://flowauth.net/v1/loaders/Strawberry2.lua",
+	[3] = "https://flowauth.net/v1/loaders/Strawberry3.lua",
+	[4] = "https://flowauth.net/v1/loaders/Strawberry4.lua",
+}
 
 local PLACES = {
-	[10696301650] = 1, [122446657157717] = 1, [90165746516953] = 1, [70650894743738] = 1,
-	[105527962898452] = 1, [11653088948] = 1, [108901361810209] = 1, [107088339391423] = 1,
-	[107103871057311] = 1, [104067066727140] = 1,
-	[142823291] = 2, [108379405712368] = 2, [94278659624110] = 2, [6686932749] = 2,
-	[105667060450408] = 2, [5233782396] = 2,
+	[10696301650] = 1,
+	[122446657157717] = 1,
+	[90165746516953] = 1,
+	[70650894743738] = 3,
+	[105527962898452] = 1,
+	[11653088948] = 3,
+	[108901361810209] = 1,
+	[107088339391423] = 3,
+	[107103871057311] = 3,
+	[104067066727140] = 3,
+	[142823291] = 4,
+	[108379405712368] = 2,
+	[94278659624110] = 2,
+	[6686932749] = 4,
+	[105667060450408] = 4,
+	[5233782396] = 2,
 }
 
 local GAMES = {
-	[129437813830973] = 1, [9534705677] = 1, [10769957062] = 1, [10769857262] = 1,
-	[4130569984] = 1, [7174773198] = 1, [3873871110] = 1, [10771881861] = 1,
-	[66654135] = 2, [5591327764] = 2, [10769543742] = 2, [2520686564] = 2,
-	[7396714471] = 2, [1831550657] = 2,
+	[129437813830973] = 3,
+	[9534705677] = 1,
+	[10769957062] = 3,
+	[10769857262] = 1,
+	[4130569984] = 3,
+	[7174773198] = 3,
+	[3873871110] = 1,
+	[10771881861] = 1,
+	[5591327764] = 2,
+	[10769543742] = 2,
+	[7396714471] = 4,
+	[1831550657] = 2,
+	[66654135] = 4,
+	[2520686564] = 4,
 }
 
+-- most specific keywords first (so "jurassic pixel" isn't caught by "jurassic")
 local NAMES = {
-	{"primeval", 1}, {"sniper arena", 1}, {"bug evolution", 1}, {"home defense", 1}, {"jurassic blocky", 1},
-	{"feral", 1}, {"degrade", 1}, {"vox seas", 1},
-	{"murder mystery", 2}, {"sanctuary", 2}, {"backseat rally", 2}, {"prehistoria", 2},
-	{"jurassic pixel", 2}, {"creatures of sonaria", 2},
+	{"murder mystery 2", 4},
+	{"jurassic pixel", 4},
+	{"creatures of sonaria", 2},
+	{"backseat rally", 2},
+	{"home defense", 1},
+	{"bug evolution", 3},
+	{"sniper arena", 1},
+	{"vox seas", 3},
+	{"primeval", 1},
+	{"sanctuary", 2},
+	{"prehistoria", 4},
+	{"murder mystery", 4},
+	{"feral", 1},
+	{"degrade", 3},
+	{"jurassic", 3},
 }
 
 local function detect()
@@ -67,7 +104,8 @@ while not part and tries < 5 do
 	part = detect()
 end
 
-local url = part == 2 and PART_2 or PART_1
+-- if we can't tell, try part 1; it will hand off to the right part on its own
+local url = PART_URL[part] or PART_URL[1]
 
 local okFetch, source = pcall(function()
 	return game:HttpGet(url)
@@ -85,8 +123,6 @@ if not chunk then
 	return warn("[Strawberry Hub] compile failed: " .. tostring(compileErr))
 end
 
--- the key UI yields here, so the run flag is cleared on its own after a moment
--- instead of staying stuck while the key box is open
 task.delay(15, function()
 	genv.StrawberryLoaderRunning = nil
 end)
