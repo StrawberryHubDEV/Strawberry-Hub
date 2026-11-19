@@ -1,6 +1,19 @@
 local genv = (getgenv and getgenv()) or _G
-if genv.StrawberryLoaderRunning then return end
-genv.StrawberryLoaderRunning = true
+
+local function notify(text)
+	pcall(function()
+		game:GetService("StarterGui"):SetCore("SendNotification", {
+			Title = "Strawberry Hub",
+			Text = text,
+			Duration = 8,
+		})
+	end)
+end
+
+if genv.StrawberryLoaderRunning and os.clock() - genv.StrawberryLoaderRunning < 20 then
+	return
+end
+genv.StrawberryLoaderRunning = os.clock()
 
 local PART_1 = "https://flowauth.net/v1/loaders/Strawberry1.lua"
 local PART_2 = "https://flowauth.net/v1/loaders/Strawberry2.lua"
@@ -54,8 +67,33 @@ while not part and tries < 5 do
 	part = detect()
 end
 
-local ok, err = pcall(function()
-	loadstring(game:HttpGet(part == 2 and PART_2 or PART_1))()
+local url = part == 2 and PART_2 or PART_1
+
+local okFetch, source = pcall(function()
+	return game:HttpGet(url)
 end)
+if not okFetch or type(source) ~= "string" or #source < 50 then
+	genv.StrawberryLoaderRunning = nil
+	notify("Couldn't reach the key server. Check your internet or try again.")
+	return warn("[Strawberry Hub] fetch failed: " .. tostring(source))
+end
+
+local chunk, compileErr = loadstring(source)
+if not chunk then
+	genv.StrawberryLoaderRunning = nil
+	notify("Script failed to load. Try executing again.")
+	return warn("[Strawberry Hub] compile failed: " .. tostring(compileErr))
+end
+
+-- the key UI yields here, so the run flag is cleared on its own after a moment
+-- instead of staying stuck while the key box is open
+task.delay(15, function()
+	genv.StrawberryLoaderRunning = nil
+end)
+
+local ok, err = pcall(chunk)
 genv.StrawberryLoaderRunning = nil
-if not ok then warn("[Strawberry Hub] " .. tostring(err)) end
+if not ok then
+	notify("Error: " .. tostring(err))
+	warn("[Strawberry Hub] " .. tostring(err))
+end
